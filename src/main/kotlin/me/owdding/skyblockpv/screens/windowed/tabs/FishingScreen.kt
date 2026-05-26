@@ -40,6 +40,8 @@ import java.text.DecimalFormat
 class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) :
     BaseWindowedPvScreen("Fishing", gameProfile, profile) {
 
+    private val sideBySideTrophiesWidth = 760
+
     private val numberFormatInstance = DecimalFormat.getCompactNumberInstance().apply {
         this.roundingMode = RoundingMode.FLOOR
     }
@@ -51,16 +53,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
         val gearWidget = getGearWidget(profile)
         var trophyWidth = 0
         val trophyWidget by lazy {
-            PvLayouts.vertical {
-                val useSmallTable = (trophyWidth < 480)
-                widget(PvWidgets.getTitleWidget("Trophy Fish", trophyWidth))
-                if (useSmallTable) {
-                    widget(PvWidgets.getMainContentWidget(getSmallTrophyTable(profile), trophyWidth))
-                } else {
-                    widget(PvWidgets.getMainContentWidget(getTrophyTable(profile), trophyWidth))
-                }
-                spacer(height = 5)
-            }
+            getTrophyWidgets(profile, trophyWidth)
         }
 
         fun LayoutBuilder.addBottomRow(first: LayoutElement, second: LayoutElement) {
@@ -83,7 +76,9 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
             this.setPos(bg.x, bg.y).visitWidgets(this@FishingScreen::addRenderableWidget)
         }
 
-        if (infoWidget.width + statWidget.width + gearWidget.width < bg.width && gearWidget.height + 165 /* Height of trophy table */ < bg.height) {
+        fun trophyHeight(width: Int) = if (width >= sideBySideTrophiesWidth) 165 else 330
+
+        if (infoWidget.width + statWidget.width + gearWidget.width < bg.width && maxOf(infoWidget.height, statWidget.height, gearWidget.height) + trophyHeight(bg.width) < bg.height) {
             trophyWidth = bg.width
             PvLayouts.frame {
                 spacer(bg.width, bg.height)
@@ -105,7 +100,10 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
                     alignHorizontallyLeft()
                 }
             }.applyLayout()
-        } else if (infoWidget.width + statWidget.width < bg.width && gearWidget.height + 10 + infoWidget.height < bg.height) {
+        } else if (
+            infoWidget.width + statWidget.width < bg.width &&
+            maxOf(infoWidget.height, statWidget.height) + 10 + maxOf(gearWidget.height, trophyHeight(bg.width - gearWidget.width)) < bg.height
+        ) {
             trophyWidth = bg.width - gearWidget.width
             PvLayouts.frame {
                 spacer(bg.width, bg.height)
@@ -123,7 +121,10 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
                 }
                 addBottomRow(gearWidget, trophyWidget)
             }.applyLayout()
-        } else if (gearWidget.width + statWidget.width < bg.width && gearWidget.height + 10 + infoWidget.height < bg.height) {
+        } else if (
+            gearWidget.width + statWidget.width < bg.width &&
+            maxOf(infoWidget.height, trophyHeight(bg.width - infoWidget.width)) + 10 + maxOf(gearWidget.height, statWidget.height) < bg.height
+        ) {
             trophyWidth = bg.width - infoWidget.width
             PvLayouts.frame {
                 spacer(bg.width, bg.height)
@@ -323,6 +324,16 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
                     }
                 }.toList().takeUnless { it.isEmpty() }?.let { withTooltip(it) } ?: this
             }
+            addStat("Trophy Frogs Caught", profile.miscFishData.trophyFrogs.totalCatches) {
+                val completed = profile.miscFishData.trophyFrogs.completedTasks.count { task ->
+                    TrophyFrogType.entries.any { task.startsWith("TROPHY_${it.internalName}_") }
+                }
+                withTooltip(
+                    whiteText("Completed Trophy Frog Tiers: ") {
+                        append("$completed/${TrophyFrogType.entries.size * trophyFrogTiers.size}")
+                    },
+                )
+            }
         },
         padding = 10,
     )
@@ -367,6 +378,41 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
         ).asWidget()
     }
 
+    private fun getTrophyWidgets(profile: SkyBlockProfile, width: Int): LayoutElement {
+        if (width < sideBySideTrophiesWidth) {
+            return PvLayouts.vertical {
+                widget(getTrophyFishWidget(profile, width))
+                spacer(height = 5)
+                widget(getTrophyFrogWidget(profile, width))
+                spacer(height = 5)
+            }
+        }
+
+        val spacing = 5
+        val frogWidth = ((width - spacing) / 3).coerceIn(280, 520)
+        val fishWidth = width - frogWidth - spacing
+        return PvLayouts.horizontal {
+            widget(getTrophyFishWidget(profile, fishWidth))
+            spacer(width = spacing)
+            widget(getTrophyFrogWidget(profile, frogWidth))
+        }
+    }
+
+    private fun getTrophyFishWidget(profile: SkyBlockProfile, width: Int): LayoutElement = PvLayouts.vertical {
+        val useSmallTable = width < 480
+        widget(PvWidgets.getTitleWidget("Trophy Fish", width))
+        if (useSmallTable) {
+            widget(PvWidgets.getMainContentWidget(getSmallTrophyTable(profile), width))
+        } else {
+            widget(PvWidgets.getMainContentWidget(getTrophyTable(profile, width), width))
+        }
+    }
+
+    private fun getTrophyFrogWidget(profile: SkyBlockProfile, width: Int): LayoutElement = PvLayouts.vertical {
+        widget(PvWidgets.getTitleWidget("Trophy Frogs", width))
+        widget(PvWidgets.getMainContentWidget(getTrophyFrogTable(profile, width), width))
+    }
+
     private fun getSmallTrophyTable(profile: SkyBlockProfile): LayoutElement {
         val trophyFishItems = TrophyFishType.entries.map { type ->
             val fishies = TrophyFishTier.entries.map { tier -> TrophyFish(type, tier) }.sortedBy { it.tier.ordinal }.reversed()
@@ -389,8 +435,12 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
         ).asWidget()
     }
 
-    private fun getTrophyTable(profile: SkyBlockProfile): LayoutElement {
-        return TrophyFishType.entries.map { type -> getTrophyTableColumn(type, profile) }.transpose().asTable(4).centerIn(uiWidth, -1).asWidget()
+    private fun getTrophyTable(profile: SkyBlockProfile, width: Int): LayoutElement {
+        return TrophyFishType.entries.map { type -> getTrophyTableColumn(type, profile) }.transpose().asTable(4).centerIn(width, -1).asWidget()
+    }
+
+    private fun getTrophyFrogTable(profile: SkyBlockProfile, width: Int): LayoutElement {
+        return TrophyFrogType.entries.map { type -> getTrophyFrogTableColumn(type, profile) }.transpose().asTable(2).centerIn(width, -1).asWidget()
     }
 
     private fun getCaughtInformation(fishies: List<TrophyFish>, profile: SkyBlockProfile): Map<TrophyFishTier, Int> {
@@ -440,6 +490,40 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
         }
     }
 
+    private fun getTrophyFrogTableColumn(type: TrophyFrogType, profile: SkyBlockProfile): List<Display> {
+        return trophyFrogTiers.reversed().map { tier ->
+            val frog = TrophyFrog(type, tier)
+            val completed = profile.miscFishData.trophyFrogs.hasCompleted(frog)
+            getTrophyFrogTableEntry(frog, completed).withTooltip(
+                frog.displayName,
+                getTrophyFrogTooltip(frog, completed),
+            )
+        }
+    }
+
+    private fun getTrophyFrogTooltip(frog: TrophyFrog, completed: Boolean) = buildList {
+        add(frog.type.obtaining)
+        add(CommonText.EMPTY)
+        add(
+            text("Status: ") {
+                append(
+                    text(if (completed) "Complete" else "Incomplete") {
+                        color = if (completed) PvColors.GREEN else PvColors.RED
+                    },
+                )
+            },
+        )
+    }
+
+    private fun getTrophyFrogTableEntry(trophyFrog: TrophyFrog, completed: Boolean): Display {
+        val item = trophyFrog.item.takeIf { completed } ?: Items.GRAY_DYE.defaultInstance
+        val state = if (completed) "§2✔" else "§4❌"
+
+        return ExtraDisplays.inventorySlot(
+            Displays.padding(3, Displays.item(item, customStackText = Text.of(state))),
+        )
+    }
+
 
     /**
      * Creates a score for a rod to determine which ones to display
@@ -470,5 +554,9 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
 
 
         return score
+    }
+
+    companion object {
+        private val trophyFrogTiers = TrophyFishTier.entries.filter { it != TrophyFishTier.NONE }
     }
 }
