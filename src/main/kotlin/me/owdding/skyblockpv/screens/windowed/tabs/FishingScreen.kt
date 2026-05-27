@@ -76,7 +76,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
             this.setPos(bg.x, bg.y).visitWidgets(this@FishingScreen::addRenderableWidget)
         }
 
-        fun trophyHeight(width: Int) = if (width >= sideBySideTrophiesWidth) 165 else 330
+        fun trophyHeight(width: Int) = if (width >= sideBySideTrophiesWidth) 165 else 250
 
         if (infoWidget.width + statWidget.width + gearWidget.width < bg.width && maxOf(infoWidget.height, statWidget.height, gearWidget.height) + trophyHeight(bg.width) < bg.height) {
             trophyWidth = bg.width
@@ -440,7 +440,12 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
     }
 
     private fun getTrophyFrogTable(profile: SkyBlockProfile, width: Int): LayoutElement {
-        return TrophyFrogType.entries.map { type -> getTrophyFrogTableColumn(type, profile) }.transpose().asTable(2).centerIn(width, -1).asWidget()
+        return TrophyFrogType.entries.map { type -> getTrophyFrogTableEntry(type, profile) }
+            .chunked(6)
+            .map { row -> row.map { Displays.padding(2, it) }.toRow() }
+            .toColumn()
+            .centerIn(width, -1)
+            .asWidget()
     }
 
     private fun getCaughtInformation(fishies: List<TrophyFish>, profile: SkyBlockProfile): Map<TrophyFishTier, Int> {
@@ -490,37 +495,36 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
         }
     }
 
-    private fun getTrophyFrogTableColumn(type: TrophyFrogType, profile: SkyBlockProfile): List<Display> {
-        return trophyFrogTiers.reversed().map { tier ->
-            val frog = TrophyFrog(type, tier)
-            val completed = profile.miscFishData.trophyFrogs.hasCompleted(frog)
-            getTrophyFrogTableEntry(frog, completed).withTooltip(
-                frog.displayName,
-                getTrophyFrogTooltip(frog, completed),
+    private fun getTrophyFrogTooltip(type: TrophyFrogType, profile: SkyBlockProfile) = buildList {
+        add(type.obtaining)
+        add(CommonText.EMPTY)
+        trophyFrogTiers.reversed().forEach { tier ->
+            val completed = profile.miscFishData.trophyFrogs.hasCompleted(TrophyFrog(type, tier))
+            add(
+                Text.of(tier.displayName).append(": ").append(
+                    Text.of(if (completed) "✔" else "❌") {
+                        color = if (completed) PvColors.GREEN else PvColors.RED
+                    },
+                ),
             )
         }
     }
 
-    private fun getTrophyFrogTooltip(frog: TrophyFrog, completed: Boolean) = buildList {
-        add(frog.type.obtaining)
-        add(CommonText.EMPTY)
-        add(
-            text("Status: ") {
-                append(
-                    text(if (completed) "Complete" else "Incomplete") {
-                        color = if (completed) PvColors.GREEN else PvColors.RED
-                    },
-                )
-            },
-        )
-    }
-
-    private fun getTrophyFrogTableEntry(trophyFrog: TrophyFrog, completed: Boolean): Display {
-        val item = trophyFrog.item.takeIf { completed } ?: Items.GRAY_DYE.defaultInstance
-        val state = if (completed) "§2✔" else "§4❌"
+    private fun getTrophyFrogTableEntry(type: TrophyFrogType, profile: SkyBlockProfile): Display {
+        val highestTier = trophyFrogTiers.reversed().firstOrNull { tier ->
+            profile.miscFishData.trophyFrogs.hasCompleted(TrophyFrog(type, tier))
+        }
+        val highestFrog = highestTier?.let { TrophyFrog(type, it) }
+        val state = Text.of(if (highestTier == null) "❌" else "✔") {
+            color = highestTier?.displayColor ?: PvColors.RED
+        }
+        val icon = ExtraDisplays.text(state, shadow = false).centerIn(16, 16)
 
         return ExtraDisplays.inventorySlot(
-            Displays.padding(3, Displays.item(item, customStackText = Text.of(state))),
+            Displays.padding(3, icon),
+        ).withTooltip(
+            highestFrog?.displayName ?: type.displayName,
+            getTrophyFrogTooltip(type, profile),
         )
     }
 
@@ -558,5 +562,13 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
 
     companion object {
         private val trophyFrogTiers = TrophyFishTier.entries.filter { it != TrophyFishTier.NONE }
+        private val TrophyFishTier.displayColor
+            get() = when (this) {
+                TrophyFishTier.NONE -> PvColors.RED
+                TrophyFishTier.BRONZE -> PvColors.DARK_GRAY
+                TrophyFishTier.SILVER -> PvColors.GRAY
+                TrophyFishTier.GOLD -> PvColors.GOLD
+                TrophyFishTier.DIAMOND -> PvColors.AQUA
+            }
     }
 }
