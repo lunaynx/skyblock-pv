@@ -39,8 +39,9 @@ import java.text.DecimalFormat
 class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) :
     BaseWindowedPvScreen("Fishing", gameProfile, profile) {
 
-    private val trophyFrogWidgetWidth = 150
-    private val sideBySideTrophiesWidth = 480 + 5 + trophyFrogWidgetWidth
+    private val compactTrophyFishWidgetWidth = 180
+    private val trophyFrogWidgetWidth = 110
+    private val sideBySideTrophiesWidth = compactTrophyFishWidgetWidth + 5 + trophyFrogWidgetWidth
     private val sideBySideTrophiesHeight = 170
     private val stackedTrophiesHeight = 205
 
