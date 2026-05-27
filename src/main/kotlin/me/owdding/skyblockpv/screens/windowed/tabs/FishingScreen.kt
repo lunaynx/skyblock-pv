@@ -41,6 +41,8 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
 
     private val trophyFrogWidgetWidth = 150
     private val sideBySideTrophiesWidth = 480 + 5 + trophyFrogWidgetWidth
+    private val sideBySideTrophiesHeight = 170
+    private val stackedTrophiesHeight = 205
 
     private val numberFormatInstance = DecimalFormat.getCompactNumberInstance().apply {
         this.roundingMode = RoundingMode.FLOOR
@@ -76,7 +78,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
             this.setPos(bg.x, bg.y).visitWidgets(this@FishingScreen::addRenderableWidget)
         }
 
-        fun trophyHeight(width: Int) = if (width >= sideBySideTrophiesWidth) 165 else 250
+        fun trophyHeight(width: Int) = if (width >= sideBySideTrophiesWidth) sideBySideTrophiesHeight else stackedTrophiesHeight
 
         if (infoWidget.width + statWidget.width + gearWidget.width < bg.width && maxOf(infoWidget.height, statWidget.height, gearWidget.height) + trophyHeight(bg.width) < bg.height) {
             trophyWidth = bg.width
@@ -391,10 +393,13 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
         val spacing = 5
         val frogWidth = trophyFrogWidgetWidth
         val fishWidth = width - frogWidth - spacing
-        return PvLayouts.horizontal {
-            widget(getTrophyFishWidget(profile, fishWidth))
-            spacer(width = spacing)
-            widget(getTrophyFrogWidget(profile, frogWidth))
+        return PvLayouts.vertical {
+            horizontal {
+                widget(getTrophyFishWidget(profile, fishWidth))
+                spacer(width = spacing)
+                widget(getTrophyFrogWidget(profile, frogWidth))
+            }
+            spacer(height = 5)
         }
     }
 
