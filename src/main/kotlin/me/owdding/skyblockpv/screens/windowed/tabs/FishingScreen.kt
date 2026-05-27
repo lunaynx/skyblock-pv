@@ -40,7 +40,8 @@ import java.text.DecimalFormat
 class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) :
     BaseWindowedPvScreen("Fishing", gameProfile, profile) {
 
-    private val sideBySideTrophiesWidth = 760
+    private val trophyFrogWidgetWidth = 150
+    private val sideBySideTrophiesWidth = 480 + 5 + trophyFrogWidgetWidth
 
     private val numberFormatInstance = DecimalFormat.getCompactNumberInstance().apply {
         this.roundingMode = RoundingMode.FLOOR
@@ -389,7 +390,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
         }
 
         val spacing = 5
-        val frogWidth = ((width - spacing) / 3).coerceIn(280, 520)
+        val frogWidth = trophyFrogWidgetWidth
         val fishWidth = width - frogWidth - spacing
         return PvLayouts.horizontal {
             widget(getTrophyFishWidget(profile, fishWidth))
@@ -440,11 +441,15 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
     }
 
     private fun getTrophyFrogTable(profile: SkyBlockProfile, width: Int): LayoutElement {
-        return TrophyFrogType.entries.map { type -> getTrophyFrogTableEntry(type, profile) }
+        val rows = TrophyFrogType.entries.map { type -> getTrophyFrogTableEntry(type, profile) }
             .chunked(4)
             .map { row -> row.map { Displays.padding(2, it) }.toRow() }
             .toColumn()
-            .centerIn(width, -1)
+
+        return ExtraDisplays.inventoryBackground(
+            4, 3,
+            Displays.padding(2, rows),
+        ).centerIn(width, -1)
             .asWidget()
     }
 
@@ -525,9 +530,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
             Displays.item(item, customStackText = state)
         }
 
-        return ExtraDisplays.inventorySlot(
-            Displays.padding(3, display),
-        ).withTooltip(
+        return display.withTooltip(
             highestFrog?.displayName ?: type.displayName,
             getTrophyFrogTooltip(type, profile),
         )
