@@ -441,7 +441,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
 
     private fun getTrophyFrogTable(profile: SkyBlockProfile, width: Int): LayoutElement {
         return TrophyFrogType.entries.map { type -> getTrophyFrogTableEntry(type, profile) }
-            .chunked(6)
+            .chunked(4)
             .map { row -> row.map { Displays.padding(2, it) }.toRow() }
             .toColumn()
             .centerIn(width, -1)
@@ -515,13 +515,18 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
             profile.miscFishData.trophyFrogs.hasCompleted(TrophyFrog(type, tier))
         }
         val highestFrog = highestTier?.let { TrophyFrog(type, it) }
-        val item = highestFrog?.item ?: type.bronze
-        val state = Text.of(if (highestTier == null) "❌" else "✔") {
-            color = highestTier?.displayColor ?: PvColors.RED
+        val item = highestFrog?.item ?: Items.GRAY_DYE.defaultInstance
+        val display = if (highestTier == null) {
+            Displays.item(item)
+        } else {
+            val state = Text.of("✔") {
+                color = highestTier.displayColor
+            }
+            Displays.item(item, customStackText = state)
         }
 
         return ExtraDisplays.inventorySlot(
-            Displays.padding(3, Displays.item(item, customStackText = state)),
+            Displays.padding(3, display),
         ).withTooltip(
             highestFrog?.displayName ?: type.displayName,
             getTrophyFrogTooltip(type, profile),
