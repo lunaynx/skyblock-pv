@@ -515,13 +515,13 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
             profile.miscFishData.trophyFrogs.hasCompleted(TrophyFrog(type, tier))
         }
         val highestFrog = highestTier?.let { TrophyFrog(type, it) }
+        val item = highestFrog?.item ?: type.bronze
         val state = Text.of(if (highestTier == null) "❌" else "✔") {
             color = highestTier?.displayColor ?: PvColors.RED
         }
-        val icon = ExtraDisplays.text(state, shadow = false).centerIn(16, 16)
 
         return ExtraDisplays.inventorySlot(
-            Displays.padding(3, icon),
+            Displays.padding(3, Displays.item(item, customStackText = state)),
         ).withTooltip(
             highestFrog?.displayName ?: type.displayName,
             getTrophyFrogTooltip(type, profile),
