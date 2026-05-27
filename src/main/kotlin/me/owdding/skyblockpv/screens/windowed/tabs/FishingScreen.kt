@@ -81,7 +81,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
 
         fun trophyHeight(width: Int) = if (width >= sideBySideTrophiesWidth) sideBySideTrophiesHeight else stackedTrophiesHeight
 
-        if (infoWidget.width + statWidget.width + gearWidget.width < bg.width && maxOf(infoWidget.height, statWidget.height, gearWidget.height) + trophyHeight(bg.width) < bg.height) {
+        if (infoWidget.width + statWidget.width + gearWidget.width < bg.width && gearWidget.height + trophyHeight(bg.width) < bg.height) {
             trophyWidth = bg.width
             PvLayouts.frame {
                 spacer(bg.width, bg.height)
@@ -105,7 +105,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
             }.applyLayout()
         } else if (
             infoWidget.width + statWidget.width < bg.width &&
-            maxOf(infoWidget.height, statWidget.height) + 10 + maxOf(gearWidget.height, trophyHeight(bg.width - gearWidget.width)) < bg.height
+            gearWidget.height + 10 + infoWidget.height < bg.height
         ) {
             trophyWidth = bg.width - gearWidget.width
             PvLayouts.frame {
@@ -126,7 +126,7 @@ class FishingScreen(gameProfile: GameProfile, profile: SkyBlockProfile? = null) 
             }.applyLayout()
         } else if (
             gearWidget.width + statWidget.width < bg.width &&
-            maxOf(infoWidget.height, trophyHeight(bg.width - infoWidget.width)) + 10 + maxOf(gearWidget.height, statWidget.height) < bg.height
+            gearWidget.height + 10 + infoWidget.height < bg.height
         ) {
             trophyWidth = bg.width - infoWidget.width
             PvLayouts.frame {
